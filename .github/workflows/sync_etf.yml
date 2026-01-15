@@ -51,7 +51,7 @@ jobs:
           
           # 确保 data 目录存在，并添加所有生成的 csv 文件
           if [ -d "data" ]; then
-            git add data/*.csv
+            git add data/*.csv *.json
           fi
           
           # 检查是否有数据变动
