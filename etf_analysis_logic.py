@@ -75,7 +75,7 @@ def analyze_single_file(file_path, etf_names):
 def main():
     # A. 获取 ETF 名称映射 (处理本地 CSV)
     etf_names = {}
-    mapping_file = 'ETF列表.xlsx - Sheet1.csv'
+    mapping_file = 'ETF列表.xlsx'
     if os.path.exists(mapping_file):
         mapping_df = pd.read_csv(mapping_file)
         # 强制转换代码为6位字符串防止丢失前导0
