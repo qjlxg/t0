@@ -6,13 +6,7 @@ import multiprocessing
 
 # ==========================================
 # 战法名称：【连跌回调·五星评分战法】
-# 逻辑说明：
-# 1. 扫描 fund_data 历史数据，对比【全量胜率】与【近3年胜率】。
-# 2. 评分系统：
-#    - ⭐⭐⭐⭐⭐：近期触发3连跌，且近3年反弹胜率 > 全量胜率 > 55%（逻辑加强，反弹意愿极强）。
-#    - ⭐⭐⭐⭐：近期触发3连跌，历史全量胜率 > 55%（长期基因优秀）。
-#    - ⭐⭐⭐：近期触发2连跌，历史胜率稳定（短线机会）。
-# 3. 操作要领：选星级高的品种，博弈次日收阳；若近3年胜率明显退化，即使连跌也不碰。
+# 排序逻辑：有信号标的（⭐）绝对置顶，按星级和近3年胜率双重排序
 # ==========================================
 
 def get_stats(df):
@@ -25,7 +19,6 @@ def get_stats(df):
             continue
         next_days = df.iloc[target_idx]
         prev_days = df.iloc[[i-1 for i in target_idx]]
-        # 计算次日涨跌幅
         changes = (next_days['收盘'].values - prev_days['收盘'].values) / prev_days['收盘'].values * 100
         win_rate = (changes > 0).mean()
         avg_change = changes.mean()
@@ -33,24 +26,22 @@ def get_stats(df):
     return stats
 
 def calculate_score(row):
-    """根据数据计算星级评分"""
     score = 0
-    # 基础：是否有近期信号
+    # 3连跌基础评分
     if row['近1周3连跌'] == 1:
         score = 3
-        # 基因加分：全量胜率高
         if row['全量3跌胜率%'] > 55: score += 1
-        # 时效加分：近3年表现更好（逻辑增强）
         if row['近3年3跌胜率%'] > row['全量3跌胜率%']: score += 1
+    # 2连跌基础评分
     elif row['近1周2连跌'] == 1:
         score = 2
         if row['全量2跌胜率%'] > 55: score += 1
     
-    # 逻辑退化惩罚：如果近3年胜率低于45%且明显低于全量，降级
+    # 风险惩罚
     if row['近3年3跌胜率%'] > 0 and row['近3年3跌胜率%'] < 45:
         score = max(0, score - 2)
         
-    return "⭐" * score if score > 0 else "无信号/观察"
+    return "⭐" * score if score > 0 else "无信号"
 
 def analyze_single_file(file_path, etf_names):
     try:
@@ -62,7 +53,6 @@ def analyze_single_file(file_path, etf_names):
         symbol = os.path.basename(file_path).split('.')[0].zfill(6)
         name = etf_names.get(symbol, "未知")
         
-        # 核心逻辑：计算连跌
         df['is_down'] = df['收盘'].diff() < 0
         counts, cur = [], 0
         for val in df['is_down']:
@@ -71,12 +61,11 @@ def analyze_single_file(file_path, etf_names):
             counts.append(cur)
         df['down_count'] = counts
         
-        # 1. 信号：最近一周
+        # 信号提取
         last_5 = df.tail(5)
         recent_2d = 1 if any(last_5['down_count'] == 2) else 0
         recent_3d = 1 if any(last_5['down_count'] == 3) else 0
         
-        # 2. 统计
         full_stats = get_stats(df)
         three_years_ago = datetime.now() - timedelta(days=1095)
         df_3y = df[df['日期'] >= three_years_ago].copy()
@@ -106,23 +95,25 @@ def main():
             '近3年4跌胜率%', '近3年4跌均涨', '近3年5跌胜率%', '近3年5跌均涨']
     
     res_df = pd.DataFrame(results, columns=cols)
-    
-    # 计算综合评分列
     res_df['战法评分'] = res_df.apply(calculate_score, axis=1)
     
-    # 重新排列：评分列放在最前面
+    # --- 关键排序逻辑优化 ---
+    # 定义星级长度作为排序列
+    res_df['rank_score'] = res_df['战法评分'].apply(lambda x: len(x) if '⭐' in x else 0)
+    
+    # 按照评分等级从高到低，再按近3年3跌胜率从高到低
+    res_df = res_df.sort_values(by=['rank_score', '近3年3跌胜率%'], ascending=False)
+    
+    # 移除辅助排序列，调整列顺序
+    res_df = res_df.drop(columns=['rank_score'])
     new_cols = ['代码', '名称', '战法评分'] + [c for c in cols if c not in ['代码', '名称']]
     res_df = res_df[new_cols]
-    
-    # 排序：星级高的在前
-    res_df['score_len'] = res_df['战法评分'].str.len()
-    res_df = res_df.sort_values(by=['score_len', '近3年3跌胜率%'], ascending=False).drop('score_len', axis=1)
 
     folder = datetime.now().strftime('%Y%m')
     if not os.path.exists(folder): os.makedirs(folder)
     out = f"{folder}/etf_analysis_logic_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
     res_df.to_csv(out, index=False, encoding='utf_8_sig')
-    print(f"分析报告已生成: {out}")
+    print(f"信号已置顶！报告生成: {out}")
 
 if __name__ == '__main__':
     main()
