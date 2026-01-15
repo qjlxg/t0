@@ -1,0 +1,43 @@
+name: etf_analysis_logic
+
+on:
+  schedule:
+    # 15:30 北京时间 = 07:30 UTC
+    - cron: '30 7 * * *'
+  push:
+    paths:
+      - 'etf_analysis_logic.py'
+      - '.github/workflows/etf_analysis_logic.yml'
+  workflow_dispatch: # 支持手动运行
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          pip install pandas
+
+      - name: Run analysis script
+        run: python etf_analysis_logic.py
+
+      - name: Commit and Push results
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          # 检查是否有新文件生成
+          if [ -n "$(git status --porcelain)" ]; then
+            git add .
+            git commit -m "Auto-update ETF analysis: $(date +'%Y-%m-%d %H:%M:%S')"
+            git push
+          else
+            echo "No changes to commit"
+          fi
