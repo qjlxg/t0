@@ -6,117 +6,123 @@ import multiprocessing
 
 # ==========================================
 # 战法名称：【连跌回调捕捉战法】
-# 逻辑说明：
-# 1. 核心假设：优质品种（ETF）连续下跌后存在均值回归的需求。
-# 2. 筛选条件：最近一周内出现 2 连跌或 3 连跌的品种（左侧预警）。
-# 3. 统计支持：通过历史数据计算 2/3/4/5 连跌后，“次日”上涨的胜率。
-# 4. 买卖要领：当近期出现信号，且历史同类信号胜率 > 55% 时，视为高胜率机会。
+# 备注：
+# 1. 扫描 fund_data 下所有历史 CSV 格式数据。
+# 2. 统计最近一周内触发 2 连跌、3 连跌的标的（前置显示）。
+# 3. 统计历史规律：计算连续下跌 2,3,4,5 天后，次日的上涨概率（胜率）与平均涨幅。
+# 4. 操作要领：寻找历史胜率高且近期触发连跌的品种，博弈超跌反弹。
 # ==========================================
 
 def analyze_single_file(file_path, etf_names):
-    """
-    单个文件的处理函数，将被并行调用
-    """
     try:
-        # 1. 加载数据
+        # 加载数据
         df = pd.read_csv(file_path)
-        if df.empty or len(df) < 10:
+        if df.empty or len(df) < 5:
             return None
             
         df['日期'] = pd.to_datetime(df['日期'])
         df = df.sort_values('日期').reset_index(drop=True)
         
-        symbol = os.path.basename(file_path).split('.')[0]
+        # 提取并标准化代码 (补齐6位)
+        raw_symbol = os.path.basename(file_path).split('.')[0]
+        symbol = raw_symbol.zfill(6) 
         name = etf_names.get(symbol, "未知")
         
-        # 2. 识别连跌逻辑 (收盘价低于前日收盘)
-        df['is_down'] = df['涨跌幅'] < 0
+        # 识别下跌逻辑 (当日收盘价 < 前日收盘价)
+        df['is_down'] = df['收盘'].diff() < 0
         
-        # 计算连续下跌天数
-        def count_consecutive(series):
-            res = []
-            count = 0
-            for val in series:
-                if val: count += 1
-                else: count = 0
-                res.append(count)
-            return res
+        # 计算连续下跌天数 (向量化逻辑)
+        def count_consecutive_downs(series):
+            counts = []
+            cur = 0
+            for is_down in series:
+                if is_down: cur += 1
+                else: cur = 0
+                counts.append(cur)
+            return counts
         
-        df['down_count'] = count_consecutive(df['is_down'])
+        df['down_count'] = count_consecutive_downs(df['is_down'])
         
-        # 3. 最近一周信号统计 (最近5个交易日)
+        # 统计最近一周信号 (最近5个交易日)
         last_5 = df.tail(5)
         recent_2d = 1 if any(last_5['down_count'] == 2) else 0
         recent_3d = 1 if any(last_5['down_count'] == 3) else 0
         
-        # 4. 历史回测规律统计
+        # 历史规律统计
         hist_stats = []
         for d in [2, 3, 4, 5]:
-            # 找到历史所有连跌 d 天后的下一天索引
-            target_indices = df[df['down_count'] == d].index + 1
-            # 确保索引不越界
-            target_indices = [i for i in target_indices if i < len(df)]
+            # 获取连跌d天后的“下一天”索引
+            target_idx = df[df['down_count'] == d].index + 1
+            # 过滤越界索引
+            target_idx = [i for i in target_idx if i < len(df)]
             
-            if not target_indices:
+            if not target_idx:
                 hist_stats.extend([0, 0])
                 continue
             
-            next_day_returns = df.iloc[target_indices]['涨跌幅']
-            win_rate = (next_day_returns > 0).mean() # 胜率
-            avg_ret = next_day_returns.mean()        # 平均涨幅
-            hist_stats.extend([round(win_rate * 100, 2), round(avg_ret, 2)])
+            # 计算这些次日的涨跌幅
+            # (当前收盘 - 前日收盘) / 前日收盘
+            next_days = df.iloc[target_idx]
+            prev_days = df.iloc[[i-1 for i in target_idx]]
+            
+            changes = (next_days['收盘'].values - prev_days['收盘'].values) / prev_days['收盘'].values * 100
+            
+            win_rate = (changes > 0).mean()
+            avg_change = changes.mean()
+            hist_stats.extend([round(win_rate * 100, 2), round(avg_change, 2)])
             
         return [symbol, name, recent_2d, recent_3d] + hist_stats
 
-    except Exception as e:
-        print(f"解析 {file_path} 失败: {e}")
+    except Exception:
         return None
 
 def main():
-    # A. 获取 ETF 名称映射 (处理本地 CSV)
+    # A. 加载 ETF 名称映射 (直接读取 .xlsx)
     etf_names = {}
     mapping_file = 'ETF列表.xlsx'
     if os.path.exists(mapping_file):
-        mapping_df = pd.read_csv(mapping_file)
-        # 强制转换代码为6位字符串防止丢失前导0
-        etf_names = dict(zip(mapping_df['证券代码'].astype(str).str.zfill(6), mapping_df['证券简称']))
+        try:
+            # 强制将证券代码列作为字符串读取，防止前导0丢失
+            m_df = pd.read_excel(mapping_file, dtype={'证券代码': str})
+            m_df['证券代码'] = m_df['证券代码'].str.zfill(6)
+            etf_names = dict(zip(m_df['证券代码'], m_df['证券简称']))
+        except Exception as e:
+            print(f"读取 Excel 失败: {e}，请确保安装了 openpyxl")
 
-    # B. 准备待扫描的文件列表
+    # B. 准备待扫描文件
     data_dir = 'fund_data'
     csv_files = glob.glob(f'{data_dir}/*.csv')
     
     if not csv_files:
-        print("未找到数据文件，请检查 fund_data 目录")
+        print("未找到数据文件，请检查 fund_data 目录。")
         return
 
-    # C. 并行计算执行
-    # 使用所有可用 CPU 核心
-    cpus = multiprocessing.cpu_count()
-    print(f"启动并行分析，核心数: {cpus}，总任务数: {len(csv_files)}")
-    
-    with multiprocessing.Pool(processes=cpus) as pool:
-        # 使用 starmap 传递多参数
+    # C. 并行计算 (并行核心数 = CPU核心数)
+    with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
         results = pool.starmap(analyze_single_file, [(f, etf_names) for f in csv_files])
 
-    # D. 结果汇总与排序
+    # D. 结果整理与排序
     results = [r for r in results if r is not None]
     cols = ['代码', '名称', '近1周2连跌', '近1周3连跌', 
             '2连跌胜率%', '2连跌均涨', '3连跌胜率%', '3连跌均涨', 
             '4连跌胜率%', '4连跌均涨', '5连跌胜率%', '5连跌均涨']
     
     res_df = pd.DataFrame(results, columns=cols)
-    
-    # 排序逻辑：优先展示最近出现 3 连跌和 2 连跌的品种
+    # 优先展示近期有信号的，再按胜率降序
     res_df = res_df.sort_values(by=['近1周3连跌', '近1周2连跌', '3连跌胜率%'], ascending=False)
 
-    # E. 保存结果
-    bj_time = datetime.now().strftime('%Y%m%d_%H%M%S')
-    folder = datetime.now().strftime('%Y%m')
-    if not os.path.exists(folder): os.makedirs(folder)
+    # E. 保存结果到年月目录
+    now = datetime.now()
+    folder = now.strftime('%Y%m')
+    if not os.path.exists(folder):
+        os.makedirs(folder)
     
-    file_path = f"{folder}/etf_analysis_logic_{bj_time}.csv"
-    res_df.to_csv(file_path, index=False, encoding='utf_8_sig')
-    print(f"分析完成，输出至: {file_path}")
+    timestamp = now.strftime('%Y%m%d_%H%M%S')
+    output_path = f"{folder}/etf_analysis_logic_{timestamp}.csv"
+    
+    # 使用 utf_8_sig 解决 Excel 打开中文乱码
+    res_df.to_csv(output_path, index=False, encoding='utf_8_sig')
+    print(f"分析完成！结果已存至: {output_path}")
 
 if __name__ == '__main__':
     main()
