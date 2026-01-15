@@ -5,8 +5,11 @@ from datetime import datetime, timedelta
 import multiprocessing
 
 # ==========================================
-# 战法名称：【连跌回调·五星评分战法】
-# 排序逻辑：有信号标的（⭐）绝对置顶，按星级和近3年胜率双重排序
+# 战法名称：【连跌回调·五星评分+极端衰竭版】
+# 新增逻辑：
+# 1. ❗极端超跌：当前处于 4 连跌或 5 连跌状态。
+# 2. 信号排列：【极端超跌】 > 【五星评分】 > 【普通信号】。
+# 3. 统计增强：针对巴西ETF等小众标的，重点扫描 4跌/5跌后的反弹基因。
 # ==========================================
 
 def get_stats(df):
@@ -27,21 +30,28 @@ def get_stats(df):
 
 def calculate_score(row):
     score = 0
-    # 3连跌基础评分
+    tag = ""
+    # 极端衰竭判断：如果当前正处于4连跌或5连跌
+    if row['当前连跌天数'] >= 4:
+        tag = "❗极端超跌"
+        score = 5 # 基础高分
+    
+    # 3连跌评分逻辑
     if row['近1周3连跌'] == 1:
-        score = 3
+        score = max(score, 3)
         if row['全量3跌胜率%'] > 55: score += 1
         if row['近3年3跌胜率%'] > row['全量3跌胜率%']: score += 1
-    # 2连跌基础评分
+    # 2连跌评分逻辑
     elif row['近1周2连跌'] == 1:
-        score = 2
+        score = max(score, 2)
         if row['全量2跌胜率%'] > 55: score += 1
     
-    # 风险惩罚
-    if row['近3年3跌胜率%'] > 0 and row['近3年3跌胜率%'] < 45:
+    # 逻辑退化惩罚
+    if 0 < row['近3年3跌胜率%'] < 45:
         score = max(0, score - 2)
         
-    return "⭐" * score if score > 0 else "无信号"
+    star_str = "⭐" * score if score > 0 else "无信号"
+    return f"{tag} {star_str}".strip()
 
 def analyze_single_file(file_path, etf_names):
     try:
@@ -53,6 +63,7 @@ def analyze_single_file(file_path, etf_names):
         symbol = os.path.basename(file_path).split('.')[0].zfill(6)
         name = etf_names.get(symbol, "未知")
         
+        # 计算连跌
         df['is_down'] = df['收盘'].diff() < 0
         counts, cur = [], 0
         for val in df['is_down']:
@@ -61,17 +72,21 @@ def analyze_single_file(file_path, etf_names):
             counts.append(cur)
         df['down_count'] = counts
         
-        # 信号提取
+        # 当前状态
+        current_down_count = counts[-1]
+        
+        # 近一周信号
         last_5 = df.tail(5)
         recent_2d = 1 if any(last_5['down_count'] == 2) else 0
         recent_3d = 1 if any(last_5['down_count'] == 3) else 0
+        recent_4d = 1 if any(last_5['down_count'] == 4) else 0
         
         full_stats = get_stats(df)
         three_years_ago = datetime.now() - timedelta(days=1095)
         df_3y = df[df['日期'] >= three_years_ago].copy()
         three_year_stats = get_stats(df_3y) if not df_3y.empty else [0]*8
             
-        return [symbol, name, recent_2d, recent_3d] + full_stats + three_year_stats
+        return [symbol, name, current_down_count, recent_2d, recent_3d, recent_4d] + full_stats + three_year_stats
     except:
         return None
 
@@ -88,7 +103,7 @@ def main():
         results = pool.starmap(analyze_single_file, [(f, etf_names) for f in csv_files])
 
     results = [r for r in results if r is not None]
-    cols = ['代码', '名称', '近1周2连跌', '近1周3连跌', 
+    cols = ['代码', '名称', '当前连跌天数', '近1周2连跌', '近1周3连跌', '近1周4连跌',
             '全量2跌胜率%', '全量2跌均涨', '全量3跌胜率%', '全量3跌均涨', 
             '全量4跌胜率%', '全量4跌均涨', '全量5跌胜率%', '全量5跌均涨',
             '近3年2跌胜率%', '近3年2跌均涨', '近3年3跌胜率%', '近3年3跌均涨',
@@ -97,23 +112,19 @@ def main():
     res_df = pd.DataFrame(results, columns=cols)
     res_df['战法评分'] = res_df.apply(calculate_score, axis=1)
     
-    # --- 关键排序逻辑优化 ---
-    # 定义星级长度作为排序列
-    res_df['rank_score'] = res_df['战法评分'].apply(lambda x: len(x) if '⭐' in x else 0)
+    # 排序优先级：极端超跌(❗) > 星级星数 > 胜率
+    res_df['sort_prio'] = res_df['战法评分'].apply(lambda x: 100 if '❗' in x else len(x))
+    res_df = res_df.sort_values(by=['sort_prio', '近3年3跌胜率%'], ascending=False).drop(columns=['sort_prio'])
     
-    # 按照评分等级从高到低，再按近3年3跌胜率从高到低
-    res_df = res_df.sort_values(by=['rank_score', '近3年3跌胜率%'], ascending=False)
-    
-    # 移除辅助排序列，调整列顺序
-    res_df = res_df.drop(columns=['rank_score'])
-    new_cols = ['代码', '名称', '战法评分'] + [c for c in cols if c not in ['代码', '名称']]
+    # 调整列顺序
+    new_cols = ['代码', '名称', '战法评分', '当前连跌天数'] + [c for c in cols if c not in ['代码', '名称', '当前连跌天数']]
     res_df = res_df[new_cols]
 
     folder = datetime.now().strftime('%Y%m')
     if not os.path.exists(folder): os.makedirs(folder)
     out = f"{folder}/etf_analysis_logic_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
     res_df.to_csv(out, index=False, encoding='utf_8_sig')
-    print(f"信号已置顶！报告生成: {out}")
+    print(f"极端超跌捕捉开启！结果已存至: {out}")
 
 if __name__ == '__main__':
     main()
