@@ -74,8 +74,8 @@ async function run() {
     }
 
     results.forEach(r => {
-        // 修改点：只记录溢价率小于 -1.0 的机会
-        if (r.premiumRaw < -1.0 && !portfolio[r.code]) {
+        // 修改点：只记录溢价率小于 -1.4 的机会
+        if (r.premiumRaw < -1.4 && !portfolio[r.code]) {
             portfolio[r.code] = {
                 name: r.name,
                 buyPrice: r.price,
