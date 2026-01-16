@@ -1,134 +1,25 @@
 {
-  "159303": {
-    "name": "恒生医疗ETF大成",
-    "buyPrice": 1.845,
-    "buyDate": "2026/1/16",
-    "status": "高折价买入(机会)"
-  },
-  "159318": {
-    "name": "恒生港股通ETF",
-    "buyPrice": 1.418,
-    "buyDate": "2026/1/16",
-    "status": "高折价买入(机会)"
-  },
-  "159333": {
-    "name": "港股央企红利ETF",
-    "buyPrice": 1.405,
-    "buyDate": "2026/1/16",
-    "status": "高折价买入(机会)"
-  },
-  "159506": {
-    "name": "港股通医疗ETF富国",
-    "buyPrice": 1.491,
-    "buyDate": "2026/1/16",
-    "status": "高折价买入(机会)"
-  },
-  "159518": {
-    "name": "标普油气ETF",
-    "buyPrice": 0.902,
-    "buyDate": "2026/1/16",
-    "status": "高折价买入(机会)"
-  },
-  "159557": {
-    "name": "恒生医疗ETF",
-    "buyPrice": 1.678,
-    "buyDate": "2026/1/16",
-    "status": "高折价买入(机会)"
-  },
-  "159567": {
-    "name": "港股创新药ETF",
-    "buyPrice": 0.83,
-    "buyDate": "2026/1/16",
-    "status": "高折价买入(机会)"
-  },
-  "159691": {
-    "name": "港股红利ETF",
-    "buyPrice": 1.32,
-    "buyDate": "2026/1/16",
-    "status": "高折价买入(机会)"
-  },
-  "159718": {
-    "name": "港股医药ETF",
-    "buyPrice": 0.987,
-    "buyDate": "2026/1/16",
-    "status": "高折价买入(机会)"
-  },
-  "159850": {
-    "name": "恒生国企ETF",
-    "buyPrice": 0.918,
-    "buyDate": "2026/1/16",
-    "status": "高折价买入(机会)"
-  },
-  "159892": {
-    "name": "恒生医药ETF",
-    "buyPrice": 0.871,
-    "buyDate": "2026/1/16",
-    "status": "高折价买入(机会)"
-  },
-  "510900": {
-    "name": "恒生中国企业ETF易方达",
-    "buyPrice": 1.168,
-    "buyDate": "2026/1/16",
-    "status": "高折价买入(机会)"
-  },
-  "513090": {
-    "name": "香港证券ETF易方达",
-    "buyPrice": 2.1,
-    "buyDate": "2026/1/16",
-    "status": "高折价买入(机会)"
-  },
-  "513280": {
-    "name": "恒生生物科技ETF",
-    "buyPrice": 1.227,
-    "buyDate": "2026/1/16",
-    "status": "高折价买入(机会)"
-  },
-  "513690": {
-    "name": "港股红利ETF博时",
-    "buyPrice": 1.092,
-    "buyDate": "2026/1/16",
-    "status": "高折价买入(机会)"
-  },
-  "513700": {
-    "name": "港股通医药ETF鹏华",
-    "buyPrice": 0.702,
-    "buyDate": "2026/1/16",
-    "status": "高折价买入(机会)"
-  },
-  "513770": {
-    "name": "港股互联网ETF",
-    "buyPrice": 0.564,
-    "buyDate": "2026/1/16",
-    "status": "高折价买入(机会)"
-  },
-  "513780": {
-    "name": "港股创新药50ETF",
-    "buyPrice": 1.749,
-    "buyDate": "2026/1/16",
-    "status": "高折价买入(机会)"
-  },
-  "513820": {
-    "name": "港股红利ETF基金",
-    "buyPrice": 1.202,
-    "buyDate": "2026/1/16",
-    "status": "高折价买入(机会)"
-  },
-  "513900": {
-    "name": "港股通100ETF",
-    "buyPrice": 1.112,
-    "buyDate": "2026/1/16",
-    "status": "高折价买入(机会)"
-  },
-  "513910": {
-    "name": "港股央企红利ETF",
-    "buyPrice": 1.579,
-    "buyDate": "2026/1/16",
-    "status": "高折价买入(机会)"
-  },
-  "520700": {
-    "name": "港股创新药ETF基金",
-    "buyPrice": 1.687,
-    "buyDate": "2026/1/16",
-    "status": "高折价买入(机会)"
-  }
+  "159303": { "name": "恒生医疗ETF大成", "buyPrice": 1.845, "buyDate": "2026/1/16", "status": "高折价买入(机会)" },
+  "159318": { "name": "恒生港股通ETF", "buyPrice": 1.418, "buyDate": "2026/1/16", "status": "高折价买入(机会)" },
+  "159333": { "name": "港股央企红利ETF", "buyPrice": 1.405, "buyDate": "2026/1/16", "status": "高折价买入(机会)" },
+  "159506": { "name": "港股通医疗ETF富国", "buyPrice": 1.491, "buyDate": "2026/1/16", "status": "高折价买入(机会)" },
+  "159518": { "name": "标普油气ETF", "buyPrice": 0.902, "buyDate": "2026/1/16", "status": "高折价买入(机会)" },
+  "159557": { "name": "恒生医疗ETF", "buyPrice": 1.678, "buyDate": "2026/1/16", "status": "高折价买入(机会)" },
+  "159567": { "name": "港股创新药ETF", "buyPrice": 0.83, "buyDate": "2026/1/16", "status": "高折价买入(机会)" },
+  "159691": { "name": "港股红利ETF", "buyPrice": 1.32, "buyDate": "2026/1/16", "status": "高折价买入(机会)" },
+  "159718": { "name": "港股医药ETF", "buyPrice": 0.987, "buyDate": "2026/1/16", "status": "高折价买入(机会)" },
+  "159850": { "name": "恒生国企ETF", "buyPrice": 0.918, "buyDate": "2026/1/16", "status": "高折价买入(机会)" },
+  "159892": { "name": "恒生医药ETF", "buyPrice": 0.871, "buyDate": "2026/1/16", "status": "高折价买入(机会)" },
+  "510900": { "name": "恒生中国企业ETF易方达", "buyPrice": 1.168, "buyDate": "2026/1/16", "status": "高折价买入(机会)" },
+  "513090": { "name": "香港证券ETF易方达", "buyPrice": 2.1, "buyDate": "2026/1/16", "status": "高折价买入(机会)" },
+  "513280": { "name": "恒生生物科技ETF", "buyPrice": 1.227, "buyDate": "2026/1/16", "status": "高折价买入(机会)" },
+  "513690": { "name": "港股红利ETF博时", "buyPrice": 1.092, "buyDate": "2026/1/16", "status": "高折价买入(机会)" },
+  "513700": { "name": "港股通医药ETF鹏华", "buyPrice": 0.702, "buyDate": "2026/1/16", "status": "高折价买入(机会)" },
+  "513770": { "name": "港股互联网ETF", "buyPrice": 0.564, "buyDate": "2026/1/16", "status": "高折价买入(机会)" },
+  "513780": { "name": "港股创新药50ETF", "buyPrice": 1.749, "buyDate": "2026/1/16", "status": "高折价买入(机会)" },
+  "513820": { "name": "港股红利ETF基金", "buyPrice": 1.202, "buyDate": "2026/1/16", "status": "高折价买入(机会)" },
+  "513900": { "name": "港股通100ETF", "buyPrice": 1.112, "buyDate": "2026/1/16", "status": "高折价买入(机会)" },
+  "513910": { "name": "港股央企红利ETF", "buyPrice": 1.579, "buyDate": "2026/1/16", "status": "高折价买入(机会)" },
+  "520700": { "name": "港股创新药ETF基金", "buyPrice": 1.687, "buyDate": "2026/1/16", "status": "高折价买入(机会)" },
+  "159513": { "name": "东南亚科技ETF", "buyPrice": 1.407, "buyDate": "2026/1/16", "status": "手动补回追踪" }
 }
