@@ -5,7 +5,7 @@ const CONCURRENCY = 30;
 const DATA_DIR = path.join(process.cwd(), 'data');
 const PORTFOLIO_PATH = path.join(DATA_DIR, 'portfolio.json');
 
-// 确保数据目录存在
+// 确保文件夹存在
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
 
 async function fetchETF(code) {
@@ -34,7 +34,7 @@ async function fetchETF(code) {
         return {
             code,
             name: qRes.data.f58,
-            price: price, // 保持数值型以便计算
+            price: price, 
             nav: nav.toFixed(4),
             premium: premiumVal.toFixed(2) + '%',
             premiumRaw: premiumVal,
@@ -45,7 +45,7 @@ async function fetchETF(code) {
 }
 
 async function run() {
-    console.log('开始处理筛选任务...');
+    console.log('开始执行折价策略筛选...');
     const etfPath = path.join(process.cwd(), 'etf.txt');
     
     if (!fs.existsSync(etfPath)) {
@@ -67,58 +67,58 @@ async function run() {
 
     const timestamp = new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
 
-    // --- 1. 更新持仓与历史盈亏追踪 ---
+    // --- 1. 持仓追踪：仅记录负溢价（折价）信号 ---
     let portfolio = {};
     if (fs.existsSync(PORTFOLIO_PATH)) {
         portfolio = JSON.parse(fs.readFileSync(PORTFOLIO_PATH, 'utf-8'));
     }
 
-    // 处理新信号 (以高折价/机会为买入信号示例：|溢价| > 1.5%)
     results.forEach(r => {
-        if (Math.abs(r.premiumRaw) > 1.5 && !portfolio[r.code]) {
+        // 修改点：只记录溢价率小于 -1.5 的机会
+        if (r.premiumRaw < -1.5 && !portfolio[r.code]) {
             portfolio[r.code] = {
                 name: r.name,
                 buyPrice: r.price,
                 buyDate: timestamp.split(' ')[0],
-                status: r.premiumRaw > 0 ? '高溢价买入' : '高折价买入'
+                status: '高折价买入(机会)'
             };
+            console.log(`[信号触发] 发现折价标的: ${r.name} (${r.code})，溢价率: ${r.premium}`);
         }
     });
     fs.writeFileSync(PORTFOLIO_PATH, JSON.stringify(portfolio, null, 2));
 
-    // 生成盈亏报表
-    const profitHeader = '\ufeff代码,名称,买入日期,买入价格,当前价格,盈亏比例,信号状态,更新时间\n';
+    // 生成盈亏报表 (Profit Tracker)
+    const profitHeader = '\ufeff代码,名称,买入日期,买入价格,当前价格,盈亏比例,更新时间\n';
     const profitRows = Object.keys(portfolio).map(code => {
         const current = results.find(r => r.code === code);
         const p = portfolio[code];
         if (!current) return null;
         const profitPct = ((current.price - p.buyPrice) / p.buyPrice * 100).toFixed(2) + '%';
-        return `${code},${p.name},${p.buyDate},${p.buyPrice},${current.price.toFixed(3)},${profitPct},${p.status},${timestamp}`;
+        return `${code},${p.name},${p.buyDate},${p.buyPrice},${current.price.toFixed(3)},${profitPct},${timestamp}`;
     }).filter(Boolean).join('\n');
     
     fs.writeFileSync(path.join(DATA_DIR, 'profit_tracker.csv'), profitHeader + profitRows);
 
-    // --- 2. 生成常规全量数据 ---
+    // --- 2. 生成全量行情数据 ---
     const header = '\ufeff代码,名称,价格,估算净值,溢价率,涨跌幅,成交额(万),更新时间\n';
     const allRows = results.map(r => 
         `${r.code},${r.name},${r.price.toFixed(3)},${r.nav},${r.premium},${r.change},${r.vol},${timestamp}`
     ).join('\n');
     fs.writeFileSync(path.join(DATA_DIR, 'all_valid_data.csv'), header + allRows);
 
-    // --- 3. 生成溢价预警 ---
-    const alertHeader = '\ufeff代码,名称,价格,溢价率,涨跌幅,状态,更新时间\n';
+    // --- 3. 生成折价预警报告 ---
+    const alertHeader = '\ufeff代码,名称,价格,溢价率,涨跌幅,更新时间\n';
     const alertRows = results
-        .filter(r => Math.abs(r.premiumRaw) > 1.5)
-        .sort((a, b) => Math.abs(b.premiumRaw) - Math.abs(a.premiumRaw))
-        .map(r => {
-            const status = r.premiumRaw > 0 ? '高溢价(风险)' : '高折价(机会)';
-            return `${r.code},${r.name},${r.price.toFixed(3)},${r.premium},${r.change},${status},${timestamp}`;
-        })
+        .filter(r => r.premiumRaw < -1.5) // 修改点：仅筛选负溢价
+        .sort((a, b) => a.premiumRaw - b.premiumRaw) // 按折价程度排序
+        .map(r => `${r.code},${r.name},${r.price.toFixed(3)},${r.premium},${r.change},${timestamp}`)
         .join('\n');
     
     fs.writeFileSync(path.join(DATA_DIR, 'high_premium_alert.csv'), alertHeader + alertRows);
 
-    console.log(`任务完成！生成了盈亏追踪表: profit_tracker.csv`);
+    console.log(`\n任务完成！`);
+    console.log(`- 发现折价预警: ${alertRows ? alertRows.split('\n').length : 0} 条`);
+    console.log(`- 盈亏追踪总数: ${Object.keys(portfolio).length} 条`);
 }
 
 run();
