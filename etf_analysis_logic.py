@@ -60,7 +60,7 @@ def analyze_single_file(file_path, etf_names):
                 score = curr_down + (2 if bias20 < -3 else 0)
                 rating, prio = f"🔴顺势 {'⭐'*score}", 100 + score
             elif curr_down >= 4 or bias20 < -8:
-                rating, prio = f"🔵逆势抢反弹 {'⚡'*curr_down}", 50 + curr_down
+                rating, prio = f"🔵反弹 {'⚡'*curr_down}", 50 + curr_down
         
         if rating == "过滤": return None
 
