@@ -4,7 +4,7 @@ const path = require('path');
 // --- 配置项 ---
 const CONCURRENCY = 30;         // 并发数
 const MIN_VOLUME = 1000;        // 最低成交额门槛：1000万人民币（低于此数不预警、不自动记录）
-const PREMIUM_THRESHOLD = -1.5; // 折价预警阈值：低于 -1.5% 触发
+const PREMIUM_THRESHOLD = -1.3; // 折价预警阈值：低于 -1.5% 触发
 const DATA_DIR = path.join(process.cwd(), 'data');
 const PORTFOLIO_PATH = path.join(DATA_DIR, 'portfolio.json');
 
