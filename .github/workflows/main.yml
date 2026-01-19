@@ -2,8 +2,8 @@ name: Update ETF Data
 
 on:
   schedule:
-    # 北京时间 23:00 对应 UTC 15:00
-    - cron: '0 15 * * *'
+    - cron: '32 7 * * *'
+    - cron: '32 3 * * *'
   push:
     # 当脚本或 yml 本身变动时触发
     paths:
