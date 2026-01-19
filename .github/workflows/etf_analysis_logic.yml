@@ -2,8 +2,9 @@ name: etf_analysis_logic
 
 on:
   schedule:
-    # 15:30 北京时间 = 07:30 UTC
-    - cron: '30 7 * * *'
+  
+    - cron: '36 7 * * *'
+    - cron: '36 3 * * *'
   push:
     paths:
       - 'etf_analysis_logic.py'
