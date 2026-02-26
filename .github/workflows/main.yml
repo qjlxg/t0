@@ -2,62 +2,46 @@ name: Update ETF Data
 
 on:
   schedule:
-    - cron: '32 7 * * *'
-    - cron: '32 3 * * *'
-  push:
-    # 当脚本或 yml 本身变动时触发
-    paths:
-      - 'download_etf.py'
-      - '.github/workflows/main.yml'
-      - 'etf.txt'
-  workflow_dispatch: # 支持手动运行
+    - cron: '0 10 * * *' # 北京时间 18:00 执行，确保收盘数据已出
+  workflow_dispatch:
 
-# 赋予工作流写权限，防止由于权限问题导致的推送失败
 permissions:
   contents: write
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest # 换成 Windows，避开 Linux 爬虫高发 IP 段
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
-          # fetch-depth: 0 表示获取所有历史记录，这对 pull --rebase 更稳定
-          fetch-depth: 0
+          fetch-depth: 1 # 只拉取最新一次，减轻负担
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.9'
+          python-version: '3.10'
 
       - name: Install dependencies
         run: |
-          pip install pandas akshare lxml requests
+          pip install --upgrade pip
+          pip install akshare pandas lxml requests  # 明确安装解析库
 
       - name: Run download script
         run: python download_etf.py
 
-      - name: Commit and Push changes
+      - name: Commit and Push
+        shell: bash # 在 Windows 上使用 bash 处理 git 逻辑
         run: |
-          # 配置 Git 用户信息
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
           
-          # 暂存数据文件
           git add fund_data/*.csv
           
-          # 检查是否有变动
           if git diff --staged --quiet; then
-            echo "No changes to commit"
+            echo "No changes"
           else
-            git commit -m "Auto-update ETF data: $(date +'%Y-%m-%d %H:%M:%S')"
-            
-            # 【关键步骤】推送前先拉取远程更新并变基，解决 "rejected (fetch first)" 报错
-            # 如果有冲突，这里会使用远程版本为主，保证工作流不中断
+            git commit -m "Auto-update: $(date +'%Y-%m-%d')"
             git pull --rebase origin main
-            
             git push origin main
           fi
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
