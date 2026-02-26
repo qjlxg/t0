@@ -33,7 +33,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install akshare pandas
+          pip install pandas akshare lxml requests
 
       - name: Run download script
         run: python download_etf.py
