@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 
 # 配置参数
-CSV_FILE = 'stock_data.csv'  # 替换为你的文件名
+CSV_FILE = 'fund_data'  # 替换为你的文件名
 K_FACTOR = 2.5               # 波动系数，怕卖飞设2.5-3.0
 ATR_PERIOD = 14
 
