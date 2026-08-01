@@ -1,0 +1,39 @@
+name: atr_strategy
+
+on:
+  workflow_dispatch:        # 支持手动运行
+  push:
+    paths:
+      - 'atr_strategy.py'   # 脚本变动时运行
+      - '.github/workflows/atr_strategy.yml' # yml变动时运行
+  # schedule:
+  #   - cron: '0 8 * * *'   # 每天北京时间16:00自动运行(UTC 8:00)
+
+jobs:
+  run-strategy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install Dependencies
+        run: |
+          pip install pandas numpy
+
+      - name: Run ATR Script
+        env:
+          TZ: Asia/Shanghai
+        run: |
+          # 运行脚本并生成带时间戳的日志
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          echo "Run Time: $TIMESTAMP"
+          python atr_strategy.py > "report_$TIMESTAMP.txt"
+          cat "report_$TIMESTAMP.txt"
+
+      # 注意：按照你的要求，这里不执行 git push 上传到仓库的操作
+      # 结果会直接显示在 GitHub Actions 的运行日志（Console）中

@@ -1,0 +1,63 @@
+name: ETF Data Sync
+
+on:
+ 
+  schedule:
+    - cron: '38 3 * * *'
+    - cron: '38 7 * * *'
+  
+   
+  
+  # 2. 手动触发 (测试用)
+  workflow_dispatch:
+
+  # 3. 脚本或配置修改时触发
+  push:
+    paths:
+      - 'fetch_data.js'
+      - '.github/workflows/sync_etf.yml'
+
+# 防止多个任务同时修改仓库导致冲突
+concurrency:
+  group: etf-sync
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    # 赋予 Bot 写入仓库的权限
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        # 修正：恢复为官方正确的 Action 路径
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run Fetch Script
+        run: node fetch_data.js
+        env:
+          TZ: 'Asia/Shanghai'
+
+      - name: Commit and Push Changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          # 确保 data 目录存在，并添加所有生成的 csv 文件
+          if [ -d "data" ]; then
+            git add data/*.csv *.json
+          fi
+          
+          # 检查是否有数据变动
+          if ! git diff --cached --quiet; then
+            git commit -m "auto: 更新 ETF 溢价数据 ($(date +'%Y-%m-%d %H:%M'))"
+            git push
+          else
+            echo "当前数据无变动，跳过提交。"
+          fi
